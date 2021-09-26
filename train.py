@@ -4,6 +4,9 @@ from sklearn.preprocessing import MinMaxScaler
 import random
 import tensorflow as tf
 from constants import SEQ_LEN, EPOCHS, BATCH_SIZE, LEARNING_RATE, TARGET_MINS
+from datetime import datetime
+import joblib
+import os
 
 
 def prep_data(df):
@@ -14,13 +17,12 @@ def prep_data(df):
         for seq_index in range(SEQ_LEN):
             pre_row = []
             for steps in (5, 60, 1440):
-                pre_row.append(df[f"low_{steps}"][index - seq_index * int(steps / 5)])
-                pre_row.append(df[f"high_{steps}"][index - seq_index * int(steps / 5)])
-                pre_row.append(df[f"open_{steps}"][index - seq_index * int(steps / 5)])
-                pre_row.append(df[f"close_{steps}"][index - seq_index * int(steps / 5)])
-                pre_row.append(
-                    df[f"volume_{steps}"][index - seq_index * int(steps / 5)]
-                )
+                cell_index = index - seq_index * int(steps / 5)
+                pre_row.append(df[f"low_{steps}"][cell_index])
+                pre_row.append(df[f"high_{steps}"][cell_index])
+                pre_row.append(df[f"open_{steps}"][cell_index])
+                pre_row.append(df[f"close_{steps}"][cell_index])
+                pre_row.append(df[f"volume_{steps}"][cell_index])
             prev_data.append(pre_row)
         prev_data.reverse()
         seq_data.append([prev_data, df[f"target_{TARGET_MINS}"][index]])
@@ -28,6 +30,19 @@ def prep_data(df):
         # Print progress
         if len(seq_data) % 10000 == 0:
             print(index)
+
+    # Balance
+    buys = []
+    sells = []
+    for seq, target in seq_data:
+        if target == 0:
+            sells.append([seq, target])
+        elif target == 1:
+            buys.append([seq, target])
+    lower = min(len(buys), len(sells))
+    buys = buys[:lower]
+    sells = sells[:lower]
+    seq_data = buys + sells
 
     # Shuffle seq data
     random.shuffle(seq_data)
@@ -43,11 +58,16 @@ def prep_data(df):
 
 
 # Load data from csv
-train_df = pd.read_csv("data/train_trade_data.csv")
-validation_df = pd.read_csv("data/validation_trade_data.csv")
+train_df = pd.read_csv("data/train_data.csv")
+validation_df = pd.read_csv("data/validation_data.csv")
+
+# Get timestamp for data folder
+ts_name = datetime.now().strftime("%Y_%m_%d_%H_%M")
+train_dir = f"training/{ts_name}/"
+os.makedirs(os.path.dirname(train_dir))
 
 # Normalize data
-for column in [
+colunms = [
     "low_5",
     "high_5",
     "open_5",
@@ -63,11 +83,15 @@ for column in [
     "open_1440",
     "close_1440",
     "volume_1440",
-]:
-    scaler = MinMaxScaler()
-    train_df[[column]] = scaler.fit_transform(train_df[[column]])
-    validation_df[[column]] = scaler.transform(validation_df[[column]])
+]
+scaler = MinMaxScaler()
+train_df[colunms] = scaler.fit_transform(train_df[colunms])
+validation_df[colunms] = scaler.transform(validation_df[colunms])
 
+# Save scaler for  prediction
+joblib.dump(scaler, f"{train_dir}scaler.gz")
+
+# Get train, validation data
 train_x, train_y = prep_data(train_df)
 validation_x, validation_y = prep_data(validation_df)
 
@@ -75,14 +99,17 @@ validation_x, validation_y = prep_data(validation_df)
 model = tf.keras.Sequential(
     [
         tf.keras.layers.LSTM(
-            128, input_shape=(train_x.shape[1], train_x.shape[2]), return_sequences=True
+            256, input_shape=(train_x.shape[1], train_x.shape[2]), return_sequences=True
         ),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.LSTM(128, return_sequences=True),
+        tf.keras.layers.LSTM(256, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.LSTM(128),
+        tf.keras.layers.LSTM(256, return_sequences=True),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.LSTM(256),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dense(32, activation="relu"),
@@ -97,7 +124,7 @@ model.compile(
     metrics=["accuracy"],
 )
 
-checkpoint_path = "training/cp.ckpt"
+checkpoint_path = f"{train_dir}checkpoint"
 cp_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_path,
     verbose=1,
@@ -106,7 +133,7 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(
     mode="max",
 )
 
-history = model.fit(
+model.fit(
     train_x,
     train_y,
     batch_size=BATCH_SIZE,
@@ -114,7 +141,3 @@ history = model.fit(
     validation_data=(validation_x, validation_y),
     callbacks=[cp_callback],
 )
-
-# Loads the weights
-# loaded_model = tf.keras.models.load_model(checkpoint_path)
-# print(loaded_model.summary())

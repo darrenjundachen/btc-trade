@@ -7,7 +7,7 @@ PRICE_INC_RATE = 0.02
 
 
 def get_train_test_split():
-    df = pd.read_csv("data/data.csv")
+    df = pd.read_csv("data/klines.csv")
 
     train_test_index = int(len(df) * TRAIN_TEST_SPLIT)
     train_df = df[:train_test_index]
@@ -83,5 +83,6 @@ def prep_trade_data(df, file_name):
 train_df, test_df = get_train_test_split()
 
 # Prep trade data
-prep_trade_data(train_df, "data/train_trade_data.csv")
-prep_trade_data(test_df, "data/test_trade_data.csv")
+prep_trade_data(train_df, "data/train_data.csv")
+prep_trade_data(test_df, "data/validation_data.csv")
+
