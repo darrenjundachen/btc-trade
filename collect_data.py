@@ -33,4 +33,4 @@ def sync_kline_data():
 
 
 # load_klines(datetime(2018, 9, 26), datetime.now()) # Initial data load
-sync_kline_data()
+#sync_kline_data()

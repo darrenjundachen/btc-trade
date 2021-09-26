@@ -5,6 +5,9 @@ import numpy as np
 import joblib
 from binance_api import timestamp_to_datetime
 from sklearn.preprocessing import MinMaxScaler
+from collect_data import sync_kline_data
+
+sync_kline_data()
 
 model_number = "2021_09_26_23_09"
 model_dir = f"training/{model_number}/"
@@ -62,4 +65,4 @@ seq_data = np.reshape(seq_data, (-1, seq_data.shape[0], seq_data.shape[1]))
 
 print(timestamp_to_datetime(df['close_time'][last_row_index]))
 print(model.predict(seq_data))
-print("0: won't rise rate, 1: will rise rate")
+print(model.predict(seq_data).argmax())
