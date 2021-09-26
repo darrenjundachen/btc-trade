@@ -1,10 +1,7 @@
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-
-TRAIN_TEST_SPLIT = 0.7  # Percentage for train
-PRICE_INC_RATE = 0.02
-
+from constants import TRAIN_TEST_SPLIT, PRICE_INC_RATE
 
 def get_train_test_split():
     df = pd.read_csv("data/klines.csv")
@@ -79,10 +76,8 @@ def prep_trade_data(df, file_name):
             print("added 10000")
 
 
-
 train_df, test_df = get_train_test_split()
 
 # Prep trade data
 prep_trade_data(train_df, "data/train_data.csv")
 prep_trade_data(test_df, "data/validation_data.csv")
-
