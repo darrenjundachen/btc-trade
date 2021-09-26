@@ -68,10 +68,12 @@ validation_df = pd.read_csv("data/validation_data.csv")
 # Get timestamp for data folder
 ts_name = datetime.now().strftime("%Y_%m_%d_%H_%M")
 train_dir = f"training/{ts_name}/"
+scaler_dir = f"{train_dir}/scalers/"
 os.makedirs(os.path.dirname(train_dir))
+os.makedirs(os.path.dirname(scaler_dir))
 
 # Normalize data
-colunms = [
+columns = [
     "low_5",
     "high_5",
     "open_5",
@@ -88,12 +90,14 @@ colunms = [
     "close_1440",
     "volume_1440",
 ]
-scaler = MinMaxScaler()
-train_df[colunms] = scaler.fit_transform(train_df[colunms])
-validation_df[colunms] = scaler.transform(validation_df[colunms])
 
-# Save scaler for  prediction
-joblib.dump(scaler, f"{train_dir}scaler.gz")
+for column in columns:
+    scaler = MinMaxScaler()
+    train_df[[column]] = scaler.fit_transform(train_df[[column]])
+    validation_df[[column]] = scaler.transform(validation_df[[column]])
+    
+    # Save scaler for  prediction
+    joblib.dump(scaler, f"{scaler_dir}{column}.gz")
 
 # Get train, validation data
 train_x, train_y = prep_data(train_df, balance_data=True)
