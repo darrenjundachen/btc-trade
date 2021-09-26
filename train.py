@@ -9,7 +9,7 @@ import joblib
 import os
 
 
-def prep_data(df):
+def prep_data(df, balance_data):
     # Prep sequence data
     seq_data = []
     for index in range(len(df) - 1, int(1440 / 5) * (SEQ_LEN - 1), -1):
@@ -32,17 +32,20 @@ def prep_data(df):
             print(index)
 
     # Balance
-    buys = []
-    sells = []
-    for seq, target in seq_data:
-        if target == 0:
-            sells.append([seq, target])
-        elif target == 1:
-            buys.append([seq, target])
-    lower = min(len(buys), len(sells))
-    buys = buys[:lower]
-    sells = sells[:lower]
-    seq_data = buys + sells
+    if balance_data:
+        buys = []
+        sells = []
+        for seq, target in seq_data:
+            if target == 0:
+                sells.append([seq, target])
+            elif target == 1:
+                buys.append([seq, target])
+        random.shuffle(buys)
+        random.shuffle(sells)
+        lower = min(len(buys), len(sells))
+        buys = buys[:lower]
+        sells = sells[:lower]
+        seq_data = buys + sells
 
     # Shuffle seq data
     random.shuffle(seq_data)
@@ -92,27 +95,29 @@ validation_df[colunms] = scaler.transform(validation_df[colunms])
 joblib.dump(scaler, f"{train_dir}scaler.gz")
 
 # Get train, validation data
-train_x, train_y = prep_data(train_df)
-validation_x, validation_y = prep_data(validation_df)
+train_x, train_y = prep_data(train_df, balance_data=True)
+validation_x, validation_y = prep_data(validation_df, balance_data=False)
 
 # LSTM
 model = tf.keras.Sequential(
     [
         tf.keras.layers.LSTM(
-            256, input_shape=(train_x.shape[1], train_x.shape[2]), return_sequences=True
+            128, input_shape=(train_x.shape[1], train_x.shape[2]), return_sequences=True
         ),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.LSTM(256, return_sequences=True),
+        tf.keras.layers.LSTM(128, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.LSTM(256, return_sequences=True),
+        tf.keras.layers.LSTM(128, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.LSTM(256),
+        tf.keras.layers.LSTM(128),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dense(32, activation="relu"),
+        tf.keras.layers.Dense(64, activation="relu"),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(64, activation="relu"),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(2, activation="softmax"),
     ]
