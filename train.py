@@ -31,6 +31,8 @@ def prep_data(df, balance_data):
         if len(seq_data) % 10000 == 0:
             print(index)
 
+    random.shuffle(seq_data)
+
     # Balance
     if balance_data:
         buys = []
@@ -47,7 +49,6 @@ def prep_data(df, balance_data):
         sells = sells[:lower]
         seq_data = buys + sells
 
-    # Shuffle seq data
     random.shuffle(seq_data)
 
     # Return X and y
@@ -109,15 +110,12 @@ model = tf.keras.Sequential(
         tf.keras.layers.LSTM(128, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.LSTM(128, return_sequences=True),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.BatchNormalization(),
         tf.keras.layers.LSTM(128),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dense(64, activation="relu"),
+        tf.keras.layers.Dense(32, activation="relu"),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(64, activation="relu"),
+        tf.keras.layers.Dense(32, activation="relu"),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(2, activation="softmax"),
     ]
