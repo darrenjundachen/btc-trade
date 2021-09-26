@@ -2,6 +2,7 @@ from binance_api import get_klines, timestamp_to_datetime
 import pandas as pd
 from datetime import datetime
 
+
 def load_klines(from_date, to_date):
     while True:
         klines = get_klines(from_date, to_date)
@@ -24,4 +25,12 @@ def load_klines(from_date, to_date):
         from_date = klines[-1][6]
         print(timestamp_to_datetime(klines[-1][0]))
 
-#load_klines(datetime(2018, 9, 26), datetime.now()) # Initial data load
+
+def sync_kline_data():
+    df = pd.read_csv("data/klines.csv")
+    close_time = df["close_time"][len(df) - 1]
+    load_klines(close_time, datetime.now())
+
+
+# load_klines(datetime(2018, 9, 26), datetime.now()) # Initial data load
+sync_kline_data()

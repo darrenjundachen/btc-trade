@@ -4,6 +4,10 @@ from constants import SEQ_LEN
 import numpy as np
 import joblib
 from binance_api import timestamp_to_datetime
+from sklearn.preprocessing import MinMaxScaler
+
+model_number = "2021_09_26_23_09"
+model_dir = f"training/{model_number}/"
 
 df = pd.read_csv("data/klines.csv")
 
@@ -25,11 +29,31 @@ seq_data.reverse()
 
 seq_data = np.array(seq_data)
 
-model_dir = "training/2021_09_26_19_10/"
+# Normalize data
+columns = [
+    "low_5",
+    "high_5",
+    "open_5",
+    "close_5",
+    "volume_5",
+    "low_60",
+    "high_60",
+    "open_60",
+    "close_60",
+    "volume_60",
+    "low_1440",
+    "high_1440",
+    "open_1440",
+    "close_1440",
+    "volume_1440",
+]
 
-# Scale
-scaler = joblib.load(f"{model_dir}scaler.gz")
-seq_data = scaler.transform(seq_data)
+for index, column in enumerate(columns):
+    # scaler = joblib.load(f"{model_dir}scalers/{column}.gz")
+    scaler = MinMaxScaler()
+    seq_data[:, index : index + 1] = scaler.fit_transform(
+        seq_data[:, index : index + 1]
+    )
 
 # Predict
 checkpoint_path = f"{model_dir}checkpoint"
@@ -38,3 +62,4 @@ seq_data = np.reshape(seq_data, (-1, seq_data.shape[0], seq_data.shape[1]))
 
 print(timestamp_to_datetime(df['close_time'][last_row_index]))
 print(model.predict(seq_data))
+print("0: won't rise rate, 1: will rise rate")
