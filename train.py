@@ -72,16 +72,13 @@ ts_name = datetime.now().strftime("%Y_%m_%d_%H_%M")
 train_dir = f"training/{ts_name}/"
 
 # Get train, validation data
-train_x, train_y = prep_data(train_df, balance_data=True)
+train_x, train_y = prep_data(train_df, balance_data=False)
 validation_x, validation_y = prep_data(validation_df, balance_data=False)
 
 # LSTM
 model = tf.keras.Sequential(
     [
-        tf.keras.layers.BatchNormalization(
-            input_shape=(train_x.shape[1], train_x.shape[2])
-        ),
-        tf.keras.layers.LSTM(128, return_sequences=True),
+        tf.keras.layers.LSTM(128, input_shape=(train_x.shape[1], train_x.shape[2]), return_sequences=True),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.LSTM(128, return_sequences=True),
@@ -90,8 +87,6 @@ model = tf.keras.Sequential(
         tf.keras.layers.LSTM(128),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dense(32, activation="relu"),
-        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(32, activation="relu"),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(2, activation="softmax"),
