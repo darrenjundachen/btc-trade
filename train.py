@@ -72,9 +72,9 @@ ts_name = datetime.now().strftime("%Y_%m_%d_%H_%M")
 train_dir = f"training/{ts_name}/"
 
 # Get train, validation data
-train_x, train_y = prep_data(train_df, balance_data=False)
+train_x, train_y = prep_data(train_df, balance_data=True)
 validation_x, validation_y = prep_data(validation_df, balance_data=False)
-print(train_x[11])
+
 # LSTM
 model = tf.keras.Sequential(
     [

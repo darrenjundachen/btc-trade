@@ -1,4 +1,8 @@
 def percentage_seq_data(seq_data):
+    """
+    Data to be the percentage change of previous one
+    First line will be removed as result
+    """
     result = []
     for index in range(1, len(seq_data)):
         result.append([])
