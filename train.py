@@ -1,20 +1,21 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
 import random
 import tensorflow as tf
 from constants import SEQ_LEN, EPOCHS, BATCH_SIZE, LEARNING_RATE, TARGET_MINS
 from datetime import datetime
-import joblib
-import os
+from comm import percentage_seq_data
 
 
 def prep_data(df, balance_data):
+    # Add one more for percentage calculation
+    extra_seq_len = SEQ_LEN + 1
+
     # Prep sequence data
     seq_data = []
-    for index in range(len(df) - 1, int(1440 / 5) * (SEQ_LEN - 1), -1):
+    for index in range(len(df) - 1, int(1440 / 5) * (extra_seq_len - 1), -1):
         prev_data = []
-        for seq_index in range(SEQ_LEN):
+        for seq_index in range(extra_seq_len):
             pre_row = []
             for steps in (5, 60, 1440):
                 cell_index = index - seq_index * int(steps / 5)
@@ -25,6 +26,7 @@ def prep_data(df, balance_data):
                 pre_row.append(df[f"volume_{steps}"][cell_index])
             prev_data.append(pre_row)
         prev_data.reverse()
+        prev_data = percentage_seq_data(prev_data)
         seq_data.append([prev_data, df[f"target_{TARGET_MINS}"][index]])
 
         # Print progress
@@ -68,47 +70,18 @@ validation_df = pd.read_csv("data/validation_data.csv")
 # Get timestamp for data folder
 ts_name = datetime.now().strftime("%Y_%m_%d_%H_%M")
 train_dir = f"training/{ts_name}/"
-scaler_dir = f"{train_dir}/scalers/"
-os.makedirs(os.path.dirname(train_dir))
-os.makedirs(os.path.dirname(scaler_dir))
-
-# Normalize data
-columns = [
-    "low_5",
-    "high_5",
-    "open_5",
-    "close_5",
-    "volume_5",
-    "low_60",
-    "high_60",
-    "open_60",
-    "close_60",
-    "volume_60",
-    "low_1440",
-    "high_1440",
-    "open_1440",
-    "close_1440",
-    "volume_1440",
-]
-
-for column in columns:
-    scaler = MinMaxScaler()
-    train_df[[column]] = scaler.fit_transform(train_df[[column]])
-    validation_df[[column]] = scaler.transform(validation_df[[column]])
-    
-    # Save scaler for  prediction
-    joblib.dump(scaler, f"{scaler_dir}{column}.gz")
 
 # Get train, validation data
-train_x, train_y = prep_data(train_df, balance_data=True)
+train_x, train_y = prep_data(train_df, balance_data=False)
 validation_x, validation_y = prep_data(validation_df, balance_data=False)
-
+print(train_x[11])
 # LSTM
 model = tf.keras.Sequential(
     [
-        tf.keras.layers.LSTM(
-            128, input_shape=(train_x.shape[1], train_x.shape[2]), return_sequences=True
+        tf.keras.layers.BatchNormalization(
+            input_shape=(train_x.shape[1], train_x.shape[2])
         ),
+        tf.keras.layers.LSTM(128, return_sequences=True),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.LSTM(128, return_sequences=True),

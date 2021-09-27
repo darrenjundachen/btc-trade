@@ -6,18 +6,20 @@ import joblib
 from binance_api import timestamp_to_datetime
 from sklearn.preprocessing import MinMaxScaler
 from collect_data import sync_kline_data
+from comm import percentage_seq_data
 
 sync_kline_data()
 
-model_number = "2021_09_26_23_09"
+model_number = "2021_09_27_10_26"
 model_dir = f"training/{model_number}/"
 
 df = pd.read_csv("data/klines.csv")
 
 # Prep sequence data
+extra_seq_len = SEQ_LEN + 1
 last_row_index = len(df) - 1
 seq_data = []
-for seq_index in range(SEQ_LEN):
+for seq_index in range(extra_seq_len):
     trade_row = []
     for mins in (5, 60, 1440):
         end_index = last_row_index - mins * seq_index
@@ -29,34 +31,10 @@ for seq_index in range(SEQ_LEN):
         trade_row.append(sum(df["volume"][start_index : end_index + 1]))
     seq_data.append(trade_row)
 seq_data.reverse()
-
+seq_data = percentage_seq_data(seq_data)
 seq_data = np.array(seq_data)
 
-# Normalize data
-columns = [
-    "low_5",
-    "high_5",
-    "open_5",
-    "close_5",
-    "volume_5",
-    "low_60",
-    "high_60",
-    "open_60",
-    "close_60",
-    "volume_60",
-    "low_1440",
-    "high_1440",
-    "open_1440",
-    "close_1440",
-    "volume_1440",
-]
-
-for index, column in enumerate(columns):
-    # scaler = joblib.load(f"{model_dir}scalers/{column}.gz")
-    scaler = MinMaxScaler()
-    seq_data[:, index : index + 1] = scaler.fit_transform(
-        seq_data[:, index : index + 1]
-    )
+print(seq_data)
 
 # Predict
 checkpoint_path = f"{model_dir}checkpoint"
