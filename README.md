@@ -1,3 +1,5 @@
+#  A recurring neural network for BTC price prediction.
+
 ```
 from models import Base
 from database import engine
